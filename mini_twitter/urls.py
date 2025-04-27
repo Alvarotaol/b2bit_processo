@@ -18,10 +18,13 @@ from django.contrib import admin
 from django.urls import path
 from django.urls import include
 
+from posts.views import FeedView
+
 #include('core.urls'),
 urlpatterns = [
     path('admin/', admin.site.urls),
 	path('api/users/', include('users.urls')),
     path('api/posts/', include('posts.urls')),
+    path('api/feed/', FeedView.as_view(), name='feed'),
 ]
 #+ include('core.urls')

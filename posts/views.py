@@ -46,3 +46,13 @@ class LikePostView(APIView):
         # Cria o like
         like = Like.objects.create(user=request.user, post=post)
         return Response(LikeSerializer(like).data, status=status.HTTP_201_CREATED)
+
+
+class FeedView(generics.ListAPIView):
+    serializer_class = PostSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        following_ids = user.following.values_list('followed_user', flat=True)
+        return Post.objects.filter(user_id__in=following_ids).order_by('-created_at')

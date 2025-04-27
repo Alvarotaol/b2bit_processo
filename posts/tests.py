@@ -1,9 +1,11 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from .models import Post
+from users.models import Follow
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+
 
 
 class PostModelTest(TestCase):
@@ -46,7 +48,7 @@ class PostViewTest(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data['count'], 2)
 
     def test_create_post_without_authentication(self):
         # Verifica que um usuário não autenticado não pode criar posts
@@ -96,3 +98,23 @@ class PostViewTest(TestCase):
         url = reverse('like-post', kwargs={'post_id': 999})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class FeedTests(TestCase):
+    def setUp(self):
+        # Cria um usuário para os testes
+        self.user = User.objects.create_user(username='user1', password='pass')
+        self.other_user = User.objects.create_user(username='user2', password='pass')
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)  # Autentica o cliente como o usuário
+
+    def test_feed_returns_followed_users_posts(self):
+        Follow.objects.create(user=self.user, followed_user=self.other_user)
+
+        post = Post.objects.create(user=self.other_user, text='Post by followed user')
+
+        response = self.client.get('/api/feed/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["text"], 'Post by followed user')
