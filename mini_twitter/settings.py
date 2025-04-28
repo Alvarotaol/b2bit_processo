@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -106,15 +107,14 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'user': '1000/day',
         'anon': '100/day',
-        'signup': '5/hour',
+        'signup': f'{config("SIGNUP_LIMIT_PER_HOUR", cast=int)}/hour',
+        'login': f'{config("LOGIN_LIMIT_PER_HOUR", cast=int)}/hour',
     }
 }
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-from decouple import config
-
 
 # Carrega as variáveis do .env
 SECRET_KEY = config('SECRET_KEY')

@@ -3,9 +3,12 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from users.models import Follow
 from django.urls import reverse
+from django.core.cache import cache
 
 class FollowUserTestCase(APITestCase):
     def setUp(self):
+        # Reseta o rate limit
+        cache.clear()
         # Criação de usuários de teste
         self.user = User.objects.create_user(username='testuser', password='testpassword')
         self.client.login(username='testuser', password='testpassword')
@@ -56,6 +59,10 @@ class FollowUserTestCase(APITestCase):
 
 
 class UserAuthTests(APITestCase):
+    def setUp(self):
+        # Reseta o rate limit
+        cache.clear()
+
     def test_user_signup(self):
         """
         Testa se um novo usuário consegue se cadastrar.
@@ -103,3 +110,97 @@ class UserAuthTests(APITestCase):
         response = self.client.post(url, data)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+from decouple import config
+
+class SignupRateLimitTest(APITestCase):
+
+    def setUp(self):
+        # Reseta o rate limit
+        cache.clear()
+
+        self.url = reverse('signup')
+
+    def test_signup_rate_limit(self):
+        # Tentar fazer 5 cadastros (sucesso)
+        signupLimitPerHour = config("SIGNUP_LIMIT_PER_HOUR", cast=int)
+        for i in range(signupLimitPerHour):
+            data = {
+                'username': f'user{i}',
+                'email': f'user{i}@example.com',
+                'password': 'password123'
+            }
+            response = self.client.post(self.url, data, format='json')
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Tentativa de cadastro excedendo o limite (deve retornar 429)
+        data = {
+            'username': 'userLimitExceeded',
+            'email': 'userLimitExceeded@example.com',
+            'password': 'password123'
+        }
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+class LoginRateLimitTest(APITestCase):
+
+    def setUp(self):
+        # Reseta o rate limit
+        cache.clear()
+
+        self.username = 'user'
+        self.password = 'password123'
+        User.objects.create_user(username=self.username, password=self.password)
+
+        self.url = reverse('token_obtain_pair')
+
+    def test_login_rate_limit(self):
+        loginLimitPerHour = config("LOGIN_LIMIT_PER_HOUR", cast=int)
+        data = {
+            'username': self.username,
+            'password': self.password
+        }
+        for i in range(loginLimitPerHour):
+            response = self.client.post(self.url, data, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+class MeEndpointTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
+        self.client.login(username='testuser', password='testpassword')
+
+    def test_get_me_info(self):
+        url = reverse('me')  # ajusta se o nome da rota for diferente
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], 'testuser')
+
+
+from unittest.mock import patch
+from users.tasks import send_new_follower_email
+from django.test import TestCase
+
+class SendFollowerEmailTest(TestCase):
+    @patch('users.tasks.send_mail')
+    def test_send_new_follower_email_task(self, mock_send_mail):
+        # Chama a task diretamente (sem delay no teste)
+        send_new_follower_email('follower@example.com', 'follower')
+
+        # Verifica se o send_mail foi chamado uma vez
+        self.assertTrue(mock_send_mail.called)
+        self.assertEqual(mock_send_mail.call_count, 1)
+
+        # Verifica se foi chamado com os argumentos corretos
+        mock_send_mail.assert_called_with(
+            'Novo seguidor no MiniTwitter!',
+            'Você acabou de ganhar um novo seguidor: follower!',
+            'no-reply@minitwitter.com',
+            ['follower@example.com']
+        )

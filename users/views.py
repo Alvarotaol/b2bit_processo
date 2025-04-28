@@ -1,6 +1,7 @@
 # users/views.py
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import permissions, status, generics
@@ -26,9 +27,12 @@ class MeView(APIView):
 class SignupView(generics.CreateAPIView):
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'signup'
 
 class LoginView(TokenObtainPairView):
-    pass
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
 class TokenRefreshView(TokenRefreshView):
     pass
@@ -52,7 +56,6 @@ class FollowUser(APIView):
         follow = Follow.objects.create(user=request.user, followed_user=followed_user)
 
         # Envia email de notificação para o outro usuário
-        print("enviando email")
         send_new_follower_email.delay(followed_user.email, request.user.username)
         return Response(FollowSerializer(follow).data, status=status.HTTP_201_CREATED)
 

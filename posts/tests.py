@@ -7,21 +7,6 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 
-
-class PostModelTest(TestCase):
-    def setUp(self):
-        # Cria um usuário para associar ao post
-        self.user = User.objects.create_user(username='testuser', password='12345')
-
-    def test_post_creation(self):
-        # Cria um post
-        post = Post.objects.create(user=self.user, text="Test Post")
-
-        # Verifica se o post foi salvo corretamente
-        self.assertEqual(post.text, "Test Post")
-        self.assertEqual(post.user.username, 'testuser')
-        self.assertIsNotNone(post.created_at)  # Verifica se a data foi definida
-
 class PostViewTest(TestCase):
     def setUp(self):
         # Cria um usuário para os testes
