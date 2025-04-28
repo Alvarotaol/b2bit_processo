@@ -8,9 +8,7 @@ from django.contrib.auth.models import User
 from .serializers import UserSerializer, FollowSerializer
 from .models import Follow
 
-#from django.contrib.auth import get_user_model
 
-#User = get_user_model()
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -21,6 +19,8 @@ class MeView(APIView):
             'id': user.id,
             'username': user.username,
             'email': user.email,
+            'followers_count': user.followers.count(),
+            'following_count': user.following.count()
         })
 
 class SignupView(generics.CreateAPIView):
@@ -33,6 +33,7 @@ class LoginView(TokenObtainPairView):
 class TokenRefreshView(TokenRefreshView):
     pass
 
+from .tasks import send_new_follower_email
 class FollowUser(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -49,6 +50,10 @@ class FollowUser(APIView):
 
         # Cria o relacionamento de seguimento
         follow = Follow.objects.create(user=request.user, followed_user=followed_user)
+
+        # Envia email de notificação para o outro usuário
+        print("enviando email")
+        send_new_follower_email.delay(followed_user.email, request.user.username)
         return Response(FollowSerializer(follow).data, status=status.HTTP_201_CREATED)
 
 class UnfollowUser(APIView):
