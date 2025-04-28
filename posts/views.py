@@ -60,11 +60,23 @@ class FeedView(generics.ListAPIView):
         cached_feed = cache.get(cache_key)
 
         if cached_feed is None:
-            print("Cache miss")
             following_ids = user.following.values_list('followed_user', flat=True)
             posts = Post.objects.filter(user_id__in=following_ids).order_by('-created_at')[:10]
             serializer = PostSerializer(posts, many=True)
             cached_feed = serializer.data
             cache.set(cache_key, cached_feed, timeout=60*15)  # Cache por 15 minutos
 
-        return Response(cached_feed)
+        paginated_feed = self.paginator.paginate_queryset(cached_feed, request)
+        return self.paginator.get_paginated_response(paginated_feed)
+
+
+class PostSearchView(generics.ListAPIView):
+    serializer_class = PostSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Post.objects.all()
+        query = self.request.query_params.get('q')
+        if query:
+            queryset = queryset.filter(text__icontains=query)
+        return queryset

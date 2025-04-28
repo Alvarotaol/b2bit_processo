@@ -5,10 +5,12 @@ from users.models import Follow
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+from django.core.cache import cache
 
 
 class PostViewTest(TestCase):
     def setUp(self):
+        cache.clear()
         # Cria um usuário para os testes
         self.user = User.objects.create_user(username='testuser', password='12345')
         self.client = APIClient()
@@ -87,6 +89,7 @@ class PostViewTest(TestCase):
 
 class FeedTests(TestCase):
     def setUp(self):
+        cache.clear()
         # Cria um usuário para os testes
         self.user = User.objects.create_user(username='user1', password='pass')
         self.other_user = User.objects.create_user(username='user2', password='pass')
@@ -97,9 +100,55 @@ class FeedTests(TestCase):
     def test_feed_returns_followed_users_posts(self):
         Follow.objects.create(user=self.user, followed_user=self.other_user)
 
-        post = Post.objects.create(user=self.other_user, text='Post by followed user')
+        Post.objects.create(user=self.other_user, text='Post by followed user')
 
         response = self.client.get('/api/feed/')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["text"], 'Post by followed user')
+
+        # Repete para pegar o resultado do cache
+        response = self.client.get('/api/feed/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["text"], 'Post by followed user')
+
+
+class PostSearchTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        # Cria um usuário para os testes
+        self.user = User.objects.create_user(username='testuser', password='12345')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+        # Cria alguns posts para testar a pesquisa
+        Post.objects.create(user=self.user, text='Post sobre trabalho')
+        Post.objects.create(user=self.user, text='Post sobre diversão')
+        Post.objects.create(user=self.user, text='Outro post sobre trabalho')
+
+    def test_search_posts_by_keyword(self):
+        # Verifica se a pesquisa por palavra-chave retorna os posts corretos
+        url = reverse('post-search')
+        response = self.client.get(url, {'q': 'trabalho'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 2)
+        self.assertIn('trabalho', response.data['results'][0]['text'])
+        self.assertIn('trabalho', response.data['results'][1]['text'])
+
+    def test_search_posts_empty(self):
+        # Verifica se a pesquisa sem palavra-chave retorna todos os posts
+        url = reverse('post-search')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 3)
+
+    def test_search_posts_no_results(self):
+        # Verifica se a pesquisa por uma palavra que não existe retorna 0 resultados
+        url = reverse('post-search')
+        response = self.client.get(url, {'q': 'nada'})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 0)
