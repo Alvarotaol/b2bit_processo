@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import permissions, status, generics
 from django.contrib.auth.models import User
+from django.contrib.auth import logout
 from .serializers import UserSerializer, FollowSerializer
 from .models import Follow
 
@@ -33,6 +34,13 @@ class SignupView(generics.CreateAPIView):
 class LoginView(TokenObtainPairView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'login'
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        logout(request)
+        return Response({'detail': 'Successfully logged out.'}, status=status.HTTP_200_OK)
 
 class TokenRefreshView(TokenRefreshView):
     pass

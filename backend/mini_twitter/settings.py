@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "corsheaders",
     'drf_yasg',
     'rest_framework',
     'rest_framework_simplejwt',
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -103,12 +105,13 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
         'users.throttling.SignupRateThrottle',
+        'users.throttling.LoginRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'user': '1000/day',
-        'anon': '100/day',
-        'signup': f'{config("SIGNUP_LIMIT_PER_HOUR", cast=int)}/hour',
-        'login': f'{config("LOGIN_LIMIT_PER_HOUR", cast=int)}/hour',
+        'user': '10000/min',
+        'anon': '1000/min',
+        'signup': f'{config("SIGNUP_LIMIT_PER_HOUR", cast=int)}/min',
+        'login': f'{config("LOGIN_LIMIT_PER_HOUR", cast=int)}/min',
     }
 }
 
@@ -200,3 +203,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+]

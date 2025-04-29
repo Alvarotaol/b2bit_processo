@@ -9,7 +9,7 @@ class Post(models.Model):
     likes = models.ManyToManyField(User, related_name='liked_posts', blank=True)
 
     def __str__(self):
-        return f"Post by {self.user.username} at {self.created_at}"
+        return f"Post #{self.id} by {self.user.username} at {self.created_at}"
 
     def like_count(self):
         return self.likes.count()

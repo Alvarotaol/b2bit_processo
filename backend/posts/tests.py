@@ -66,6 +66,27 @@ class PostViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Post.objects.count(), 0)
 
+    def test_delete_nonexistent_post(self):
+        # Teste de deleção de post inexistente
+        url = reverse('post-detail', kwargs={'pk': 999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_update_nonexistent_post(self):
+        # Teste de atualização de post inexistente
+        url = reverse('post-detail', kwargs={'pk': 999})
+        data = {'text': 'Updated Post'}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_another_user_post(self):
+        # Teste de tentativa de deleção de post de outro usuário
+        other_user = User.objects.create_user(username='other_user', password='pass')
+        post = Post.objects.create(user=other_user, text='Post to delete')
+        url = reverse('post-detail', kwargs={'pk': post.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_like_post(self):
         # Teste de like de post
         post = Post.objects.create(user=self.user, text='Post to like')
@@ -80,8 +101,8 @@ class PostViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(post.post_likes.count(), 0)
 
-    # Teste de like de post inexistente
     def test_like_nonexistent_post(self):
+        # Teste de like de post inexistente
         url = reverse('like-post', kwargs={'post_id': 999})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
