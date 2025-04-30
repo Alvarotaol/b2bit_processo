@@ -15,7 +15,7 @@ class Post(models.Model):
         return self.likes.count()
 
     class Meta:
-        ordering = ['-created_at']  # Para ordenar os posts pela data de criação
+        ordering = ['-created_at']
 
 
 from .models import Post

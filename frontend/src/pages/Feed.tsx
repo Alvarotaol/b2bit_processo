@@ -19,7 +19,6 @@ export default function Feed() {
 
     try {
       setLoading(true);
-      console.log("Carregando feed");
       const response = await fetchFeed(url);
       //const response = {data: {next: null, results: []}}
       setPosts((prev) => [...prev, ...response.data.results]);
@@ -35,7 +34,6 @@ export default function Feed() {
   }
 
   useEffect(() => {
-    console.log("didRun", didRun);
     if (!didRun) {
       //setDidRun(true);
       didRun = true;

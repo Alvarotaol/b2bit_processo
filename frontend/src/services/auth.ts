@@ -22,7 +22,19 @@ export async function signup(data: SignupData) {
   return response.data;
 }
 
-export async function logout() {
+export const handleLogout = async () => {
+  try {
+    await logout();
+    localStorage.removeItem('token');
+    return true;
+  } catch (err) {
+    console.error('Logout failed', err);
+    return false;
+  }
+};
+
+
+async function logout() {
   const response = await Api.post('/users/logout/');
   return response.data;
 }

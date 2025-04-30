@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 
 class Api {
 	static getAxios (withCredentials: boolean = true) {
@@ -18,7 +18,15 @@ class Api {
 	}
 
 	static post(url: string, data: object = {}, withCredentials: boolean = true) {
-		return this.getAxios(withCredentials).post(url, data);
+		return this.getAxios(withCredentials).post(url, data).catch(err => {
+			if(err.response.status === 401) {
+				window.location.href = "/login";
+			}
+			if(err.response.status === 429) {
+				console.error("Too many requests");
+			}
+			return {} as AxiosResponse;
+		});
 	}
 
 	static delete(url: string, data: object = {}, withCredentials: boolean = true) {

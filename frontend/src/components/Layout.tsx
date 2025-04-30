@@ -1,19 +1,23 @@
-import { ReactNode, createContext } from "react";
+import { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import useAuth from "../hooks/useAuth";
-import { UserType } from "../types";
+import { handleLogout } from "../services/auth";
+import UserContextProvider from "./UserContext";
 
 type Props = {
   children: ReactNode;
 };
 
-export const UserContext = createContext({ user: {} as UserType | null });
-
 export default function Layout({ children }: Props) {
 
-  const { handleLogout, user } = useAuth();
+  const onLogout = async () => {
+    const success = await handleLogout();
+    if(success) {
+      window.location.href = "/login";
+    }
+  };
+
   return (
-    <UserContext.Provider value={{user}}>
+    <UserContextProvider>
       <div className="min-h-screen bg-gray-100">
         <header className="flex items-center justify-between bg-white shadow px-6 py-4">
           <div className="flex items-center space-x-2">
@@ -22,14 +26,14 @@ export default function Layout({ children }: Props) {
           </div>
           <nav className="space-x-4">
             <Link to="/feed" className="text-sm hover:underline">Feed</Link>
-            <Link to="/profile" className="text-sm hover:underline">Perfil {user? ` de ${user.username}` : ""}</Link>
-            <button onClick={handleLogout} className="text-sm text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded" >
+            <Link to="/profile" className="text-sm hover:underline">Perfil</Link>
+            <button onClick={onLogout} className="text-sm text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded" >
               Logout
             </button>
           </nav>
         </header>
         <main className="p-6">{children}</main>
       </div>
-    </UserContext.Provider>
+    </UserContextProvider>
   );
 }

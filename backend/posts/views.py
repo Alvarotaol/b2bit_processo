@@ -1,10 +1,12 @@
-from rest_framework import status, generics
-from rest_framework.views import APIView
-from .models import Post, Like
-from rest_framework.response import Response
-from .serializers import PostSerializer, LikeSerializer
-from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status, generics
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from .serializers import PostSerializer, LikeSerializer
+from .models import Post, Like
+User = get_user_model()
 
 class PostListCreateView(generics.ListCreateAPIView):
     queryset = Post.objects.all()
@@ -33,7 +35,6 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
             return self.destroy(request, *args, **kwargs)
         else:
             return Response({"detail": "You do not have permission to delete this post."}, status=status.HTTP_403_FORBIDDEN)
-
 
 
 class LikePostView(APIView):

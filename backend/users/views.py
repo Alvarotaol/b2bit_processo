@@ -5,11 +5,11 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import permissions, status, generics
-from django.contrib.auth.models import User
-from django.contrib.auth import logout
+from django.contrib.auth import logout, get_user_model
 from .serializers import UserSerializer, FollowSerializer
 from .models import Follow
-
+from posts.models import Post
+User = get_user_model()
 
 
 class MeView(APIView):
@@ -85,3 +85,50 @@ class UnfollowUser(APIView):
         # Deleta o relacionamento de seguimento
         follow.delete()
         return Response({'detail': 'Successfully unfollowed.'}, status=status.HTTP_200_OK)
+
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id=None):
+        user = request.user if user_id is None else User.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"detail": "User not found."}, status=404)
+
+        is_own_profile = user == request.user
+        is_following = None if is_own_profile else request.user.following.filter(id=user.id).exists()
+
+        posts = Post.objects.filter(user=user).order_by("-created_at")
+        posts_data = [
+            {
+                "id": post.id,
+                "text": post.text,
+                "created_at": post.created_at,
+                "likes_count": post.likes.count(),
+            }
+            for post in posts
+        ]
+
+        return Response({
+            "id": user.id,
+            "username": user.username,
+            "followers_count": user.followers.count(),
+            "following_count": user.following.count(),
+            "is_following": is_following,
+        })
+
+from posts.serializers import PostSerializer
+
+class UserPostsView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = [PostSerializer]
+
+    def get(self, request, user_id):
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"detail": "Usuário não encontrado"}, status=404)
+
+        posts = Post.objects.filter(user=user).order_by("-created_at")
+        posts_data = PostSerializer(posts, many=True).data
+        paginate_posts = self.paginator.paginate_queryset(posts_data, request)
+        return self.paginator.get_paginated_response(paginate_posts)

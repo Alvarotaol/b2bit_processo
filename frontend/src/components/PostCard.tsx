@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { PostType } from "../types";
 import { Heart } from "lucide-react";
 import { sendLike, deletePost } from "../services/feed";
-//import useAuth from "../hooks/useAuth";
-import { UserContext } from "../components/Layout";
+import { UserContext } from "../components/UserContext";
 
 type PostProps = {
   post: PostType;
@@ -12,7 +11,7 @@ type PostProps = {
 const PostCard: React.FC<PostProps> = ({ post }) => {
   const [like_count, setLikes] = useState(post.like_count);
   const [liked, setLiked] = useState(post.has_liked);
-  const { user } = React.useContext(UserContext);
+  const user = React.useContext(UserContext);
 
   const onLike = async () => {
     try {
@@ -37,7 +36,7 @@ const PostCard: React.FC<PostProps> = ({ post }) => {
     <div className="border rounded-2xl p-4 shadow-sm mb-4 bg-white flex flex-col gap-2">
       <div className="flex justify-between items-center">
         <div className="text-sm font-semibold">
-          {post.user}#{post.id}-{localStorage.getItem("username")}
+          {post.user}
           <span className="text-gray-500 text-xs ml-2">
             {new Date(post.created_at).toLocaleString()}
           </span>

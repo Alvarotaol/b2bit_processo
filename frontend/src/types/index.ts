@@ -13,3 +13,12 @@ export interface UserType {
 	username: string;
 	email: string;
 }
+
+export interface UserProfileType {
+	id: number;
+	username: string;
+	email: string;
+	followers_count: number;
+	following_count: number;
+	is_following?: boolean;
+}

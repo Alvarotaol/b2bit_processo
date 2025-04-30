@@ -1,17 +1,20 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
-from django.contrib.auth.models import User
-from users.models import Follow
-from django.urls import reverse
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.urls import reverse
+from users.models import Follow
+User = get_user_model()
 
 class FollowUserTestCase(APITestCase):
     def setUp(self):
         # Reseta o rate limit
         cache.clear()
         # Criação de usuários de teste
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
-        self.client.login(username='testuser', password='testpassword')
+        self.username = 'testuser'
+        self.password = 'testpassword'
+        self.user = User.objects.create_user(username=self.username, password=self.password)
+        self.client.force_authenticate(user=self.user)
 
         self.followed_user = User.objects.create_user(username='followeduser', password='testpassword')
 
@@ -114,15 +117,11 @@ class UserAuthTests(APITestCase):
 from decouple import config
 
 class SignupRateLimitTest(APITestCase):
-
-    def setUp(self):
+    def test_signup_rate_limit(self):
         # Reseta o rate limit
         cache.clear()
-
-        self.url = reverse('signup')
-
-    def test_signup_rate_limit(self):
-        # Tentar fazer 5 cadastros (sucesso)
+        url = reverse('signup')
+        # Tentar fazer vários cadastros (sucesso)
         signupLimitPerHour = config("SIGNUP_LIMIT_PER_HOUR", cast=int)
         for i in range(signupLimitPerHour):
             data = {
@@ -130,7 +129,7 @@ class SignupRateLimitTest(APITestCase):
                 'email': f'user{i}@example.com',
                 'password': 'password123'
             }
-            response = self.client.post(self.url, data, format='json')
+            response = self.client.post(url, data, format='json')
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Tentativa de cadastro excedendo o limite (deve retornar 429)
@@ -139,16 +138,13 @@ class SignupRateLimitTest(APITestCase):
             'email': 'userLimitExceeded@example.com',
             'password': 'password123'
         }
-        response = self.client.post(self.url, data, format='json')
+        response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
 
 class LoginRateLimitTest(APITestCase):
 
     def setUp(self):
-        # Reseta o rate limit
-        cache.clear()
-
         self.username = 'user'
         self.password = 'password123'
         User.objects.create_user(username=self.username, password=self.password)
@@ -156,12 +152,15 @@ class LoginRateLimitTest(APITestCase):
         self.url = reverse('token_obtain_pair')
 
     def test_login_rate_limit(self):
+        # Reseta o rate limit
+        cache.clear()
         loginLimitPerHour = config("LOGIN_LIMIT_PER_HOUR", cast=int)
         data = {
             'username': self.username,
             'password': self.password
         }
         for i in range(loginLimitPerHour):
+            print(i)
             response = self.client.post(self.url, data, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -172,15 +171,20 @@ class LoginRateLimitTest(APITestCase):
 class MeEndpointTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
-        self.client.login(username='testuser', password='testpassword')
+        self.username = 'testuser'
+        self.password = 'testpassword'
+        self.user = User.objects.create_user(username=self.username, password=self.password)
+        self.client.force_authenticate(user=self.user)
 
     def test_get_me_info(self):
+        """
+        Testa se o endpoint /me retorna as informações do usuário autenticado.
+        """
         url = reverse('me')  # ajusta se o nome da rota for diferente
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['username'], 'testuser')
+        self.assertEqual(response.data['username'], self.username)
 
 
 from unittest.mock import patch
@@ -190,6 +194,9 @@ from django.test import TestCase
 class SendFollowerEmailTest(TestCase):
     @patch('users.tasks.send_mail')
     def test_send_new_follower_email_task(self, mock_send_mail):
+        """
+        Testa se a task send_new_follower_email chama o send_mail com os argumentos corretos.
+        """
         # Chama a task diretamente (sem delay no teste)
         send_new_follower_email('follower@example.com', 'follower')
 
@@ -204,3 +211,107 @@ class SendFollowerEmailTest(TestCase):
             'no-reply@minitwitter.com',
             ['follower@example.com']
         )
+
+from posts.models import Post
+
+
+class ProfileViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.username = 'testuser'
+        self.password = 'testpassword'
+        self.user = User.objects.create_user(username=self.username, password=self.password)
+        self.number_of_followers = 5
+        self.number_of_following = 3
+        for i in range(self.number_of_followers):
+            follower = User.objects.create_user(username=f"follower{i}", password="testpass")
+            Follow.objects.create(user=follower, followed_user=self.user)
+            if(i < self.number_of_following):
+                Follow.objects.create(user=self.user, followed_user=follower)
+        self.client.force_authenticate(user=self.user)
+
+    def test_get_profile_by_id(self):
+        """
+        Testa se o endpoint /users/profile/{user_id} retorna as informações do usuário.
+        """
+        url = reverse('user-profile', kwargs={'user_id': self.user.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["followers_count"], self.number_of_followers)
+        self.assertEqual(response.data["following_count"], self.number_of_following)
+        self.assertEqual(response.data["username"], self.user.username)
+
+    def test_get_invalid_profile(self):
+        """
+        Testa se o endpoint /users/profile/{user_id} retorna um erro 404 se o usuário não existir."""
+        url = reverse('user-profile', kwargs={'user_id': 9999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_my_profile(self):
+        """
+        Testa se o endpoint /users/profile retorna as informações do usuário autenticado.
+        """
+        url = reverse('my-profile')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], self.user.username)
+
+
+class UserPostsViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.other_user = User.objects.create_user(username="otheruser", password="testpass")
+        Post.objects.create(user=self.user, text="Hello World")
+        Post.objects.create(user=self.other_user, text="Goodbye World")
+        self.client.force_authenticate(user=self.user)
+
+    def test_get_user_posts(self):
+        """
+        Testa se o endpoint /users/{user_id}/posts retorna os posts do usuário.
+        """
+        url = reverse('user-posts', kwargs={'user_id': self.user.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["text"], "Hello World")
+
+        url = reverse('user-posts', kwargs={'user_id': self.other_user.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["text"], "Goodbye World")
+
+    def test_get_invalid_user_posts(self):
+        """
+        Testa se o endpoint /users/{user_id}/posts retorna um erro 404 se o usuário nao existir.
+        """
+        url = reverse('user-posts', kwargs={'user_id': 9999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class UserPostsPaginationTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.force_authenticate(user=self.user)
+
+        # Cria 15 posts para testar paginação
+        for i in range(15):
+            Post.objects.create(user=self.user, text=f"Post número {i}")
+
+    def test_paginated_user_posts(self):
+        url = reverse('user-posts', kwargs={'user_id': self.user.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("results", response.data)
+        self.assertLessEqual(len(response.data["results"]), 10)  # Página padrão com 10 itens
+        self.assertIn("next", response.data)
+
+    def test_second_page_user_posts(self):
+        url = reverse('user-posts', kwargs={'user_id': self.user.id}) + "?page=2"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("results", response.data)
+        self.assertGreater(len(response.data["results"]), 0)

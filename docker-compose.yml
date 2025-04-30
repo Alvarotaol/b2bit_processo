@@ -64,6 +64,8 @@ services:
     image: redis:alpine
     networks:
       - backend_network
+    expose:
+      - "6379"
 
   # Celery (worker)
   celery:
