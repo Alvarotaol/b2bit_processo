@@ -96,18 +96,7 @@ class ProfileView(APIView):
             return Response({"detail": "User not found."}, status=404)
 
         is_own_profile = user == request.user
-        is_following = None if is_own_profile else request.user.following.filter(id=user.id).exists()
-
-        posts = Post.objects.filter(user=user).order_by("-created_at")
-        posts_data = [
-            {
-                "id": post.id,
-                "text": post.text,
-                "created_at": post.created_at,
-                "likes_count": post.likes.count(),
-            }
-            for post in posts
-        ]
+        is_following = None if is_own_profile else request.user.following.filter(followed_user=user.id).exists()
 
         return Response({
             "id": user.id,
@@ -132,3 +121,17 @@ class UserPostsView(generics.ListAPIView):
         posts_data = PostSerializer(posts, many=True).data
         paginate_posts = self.paginator.paginate_queryset(posts_data, request)
         return self.paginator.get_paginated_response(paginate_posts)
+
+
+from .serializers import UserSuggestionSerializer
+
+class UserSuggestionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        following_ids = user.following.values_list("followed_user", flat=True)
+        suggestions = User.objects.exclude(id__in=following_ids).exclude(id=user.id)[:10]
+
+        serializer = UserSuggestionSerializer(suggestions, many=True)
+        return Response(serializer.data)

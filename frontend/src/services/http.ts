@@ -14,10 +14,30 @@ class Api {
 	static get(url: string, data: object = {}, withCredentials: boolean = true) {
 		return this.getAxios(withCredentials).get(url, {
 			params: data,
+		}).catch(err => {
+			if(err.response.status === 401) {
+				window.location.href = "/login";
+			}
+			return {} as AxiosResponse;
 		});
 	}
 
-	static post(url: string, data: object = {}, withCredentials: boolean = true) {
+	static post(url: string, data: object | FormData = {}, withCredentials: boolean = true) {
+		if(data instanceof FormData) {
+			return this.getAxios(withCredentials).post(url, data, {
+				headers: {
+					"Content-Type": "multipart/form-data"
+				}
+			}).catch(err => {
+				if(err.response.status === 401) {
+					window.location.href = "/login";
+				}
+				if(err.response.status === 429) {
+					console.error("Too many requests");
+				}
+				return {} as AxiosResponse;
+			});
+		}
 		return this.getAxios(withCredentials).post(url, data).catch(err => {
 			if(err.response.status === 401) {
 				window.location.href = "/login";

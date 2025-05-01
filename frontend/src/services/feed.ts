@@ -26,9 +26,14 @@ async function deletePost(postId: number) {
   return false;
 }
 
-async function sendPost(text: string) {
-  const response = await Api.post(`/posts/`, { text });
+async function sendPost(formData: FormData) {
+  const response = await Api.post(`/posts/`, formData);
   return response;
 }
 
-export { fetchFeed, sendPost,sendLike, deletePost };
+async function fetchSuggestions() {
+  const response = await Api.get("users/suggestions/");
+  return response.data;
+}
+
+export { fetchFeed, sendPost,sendLike, deletePost, fetchSuggestions };

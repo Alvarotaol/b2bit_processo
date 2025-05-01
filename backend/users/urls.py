@@ -15,4 +15,5 @@ urlpatterns = [
     path('profile/', ProfileView.as_view(), name='my-profile'),
     path('profile/<int:user_id>/', ProfileView.as_view(), name='user-profile'),
     path('<int:user_id>/posts/', UserPostsView.as_view(), name='user-posts'),
+    path('suggestions/', UserSuggestionsView.as_view(), name='suggestions'),
 ]

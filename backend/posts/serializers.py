@@ -3,7 +3,8 @@ from .models import Post, Like
 
 class PostSerializer(serializers.ModelSerializer):
     like_count = serializers.ReadOnlyField(source="post_likes.count")
-    user = serializers.ReadOnlyField(source='user.username')
+    username = serializers.ReadOnlyField(source='user.username')
+    user_id = serializers.ReadOnlyField(source='user.id')
     has_liked = serializers.SerializerMethodField()
 
     def get_has_liked(self, obj):
@@ -13,7 +14,7 @@ class PostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ['id', 'text', 'image', 'created_at', 'user', 'like_count', 'has_liked']
+        fields = ['id', 'text', 'image', 'created_at', 'username', 'user_id', 'like_count', 'has_liked']
 
 
 class LikeSerializer(serializers.ModelSerializer):

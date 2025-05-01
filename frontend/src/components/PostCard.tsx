@@ -3,6 +3,7 @@ import { PostType } from "../types";
 import { Heart } from "lucide-react";
 import { sendLike, deletePost } from "../services/feed";
 import { UserContext } from "../components/UserContext";
+import { Link } from "react-router-dom";
 
 type PostProps = {
   post: PostType;
@@ -36,12 +37,12 @@ const PostCard: React.FC<PostProps> = ({ post }) => {
     <div className="border rounded-2xl p-4 shadow-sm mb-4 bg-white flex flex-col gap-2">
       <div className="flex justify-between items-center">
         <div className="text-sm font-semibold">
-          {post.user}
+          <Link to={`/profile/${post.user_id}`}>{post.username}</Link>
           <span className="text-gray-500 text-xs ml-2">
             {new Date(post.created_at).toLocaleString()}
           </span>
         </div>
-        {user && post.user === user.username  && <button className="text-red-500 text-sm hover:underline" onClick={onDelete}>
+        {user && post.user_id === user.id  && <button className="text-red-500 text-sm hover:underline" onClick={onDelete}>
           Excluir
         </button>}
       </div>

@@ -33,3 +33,10 @@ class FollowSerializer(serializers.ModelSerializer):
         if data['user'] == data['followed_user']:
             raise serializers.ValidationError("You cannot follow yourself.")
         return data
+
+from rest_framework import serializers
+
+class UserSuggestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username"]

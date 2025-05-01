@@ -10,4 +10,4 @@ class Follow(models.Model):
         unique_together = ('user', 'followed_user')  # Garante que um usuário não pode seguir o mesmo usuário duas vezes.
 
     def __str__(self):
-        return f'{self.user.username} follows {self.followed_user.username}'
+        return f'{self.user.username}#{self.user.id} follows {self.followed_user.username}#{self.followed_user.id}'

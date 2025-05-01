@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { handleLogout } from "../services/auth";
 import UserContextProvider from "./UserContext";
+import SuggestionsSidebar from "./SuggestionsSidebar";
 
 type Props = {
   children: ReactNode;
@@ -32,7 +33,10 @@ export default function Layout({ children }: Props) {
             </button>
           </nav>
         </header>
-        <main className="p-6">{children}</main>
+        <main className="flex max-w-6xl mx-auto mt-6 px-4 gap-6">
+          <div className="flex-1">{children}</div>
+          <SuggestionsSidebar />
+        </main>
       </div>
     </UserContextProvider>
   );

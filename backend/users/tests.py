@@ -160,7 +160,6 @@ class LoginRateLimitTest(APITestCase):
             'password': self.password
         }
         for i in range(loginLimitPerHour):
-            print(i)
             response = self.client.post(self.url, data, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -315,3 +314,36 @@ class UserPostsPaginationTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("results", response.data)
         self.assertGreater(len(response.data["results"]), 0)
+
+class SuggestionTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="main", password="123456")
+        self.client.force_authenticate(user=self.user)
+
+        # Cria alguns usuários
+        self.other_users = [
+            User.objects.create_user(username=f"user{i}", password="123456")
+            for i in range(5)
+        ]
+
+        # main segue os 2 primeiros
+        Follow.objects.create(user=self.user, followed_user=self.other_users[0])
+        Follow.objects.create(user=self.user, followed_user=self.other_users[1])
+    def test_suggestions_does_not_include_self_or_followed(self):
+        response = self.client.get(reverse("suggestions"))
+        self.assertEqual(response.status_code, 200)
+
+        usernames = [u["username"] for u in response.data]
+
+        # Usuários seguidos não devem estar na resposta
+        self.assertNotIn("user0", usernames)
+        self.assertNotIn("user1", usernames)
+
+        # O próprio usuário não deve estar na resposta
+        self.assertNotIn("main", usernames)
+
+        # Os demais devem aparecer
+        self.assertIn("user2", usernames)
+        self.assertIn("user3", usernames)
+        self.assertIn("user4", usernames)
+

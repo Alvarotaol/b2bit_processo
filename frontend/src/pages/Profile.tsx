@@ -28,7 +28,7 @@ export default function Profile() {
       if(!user.id) return;
       setLoading(true);
       try {
-        const data = await fetchProfileData(user.id);
+        const data = await fetchProfileData(profile_id);
         setProfile(data);
         loadPosts(profile_id || user.id).then((posts) => setPosts(posts.data.results));
       } catch (err) {
@@ -41,12 +41,13 @@ export default function Profile() {
       didRun = true;
       loadProfile();
     }
-  }, [profile?.id]);
+  }, [profile_id]);
 
   const handleFollow = async () => {
     if (!profile) return;
-    const updated = await toggleFollow(profile.id);
-    setProfile(updated);
+    const updated = await toggleFollow(profile);
+    if (updated === undefined) return;
+    setProfile({...profile, is_following: updated});
   };
 
   if (loading || !profile) return (
