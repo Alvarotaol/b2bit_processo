@@ -21,9 +21,13 @@ migrate:
 createsuperuser:
 	$(DC) run $(CONTAINER_NAME) $(DJANGO_CMD) createsuperuser
 
+# Recria o ambiente Docker
+build:
+	$(DC) up --build -d
+
 # Sobe o ambiente Docker
 up:
-	$(DC) up --build -d
+	$(DC) up -d
 
 # Para o ambiente Docker
 down:

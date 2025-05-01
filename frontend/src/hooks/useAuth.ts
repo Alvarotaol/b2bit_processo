@@ -23,6 +23,7 @@ export default function useAuth() {
     try {
       const response = await login({ username, password });
       localStorage.setItem('token', response.access);
+      localStorage.setItem('refresh', response.refresh);
       const data = await me();
       setUser({ ...data });
       localStorage.setItem('user', JSON.stringify(data));
@@ -38,8 +39,7 @@ export default function useAuth() {
   const handleSignup = async (username: string, email: string, password: string) => {
     setLoading(true);
     try {
-      const response = await signup({ username, email, password });
-      localStorage.setItem('token', response.token);
+      await signup({ username, email, password });
       history('login');
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Signup failed');

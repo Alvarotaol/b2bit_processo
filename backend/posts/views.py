@@ -1,10 +1,11 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView
 from rest_framework import status, generics
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from .serializers import PostSerializer, LikeSerializer
+from .serializers import LikeSerializer, PostSerializer
 from .models import Post, Like
 User = get_user_model()
 
@@ -12,15 +13,10 @@ class PostListCreateView(generics.ListCreateAPIView):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    def post(self, request):
-        serializer = PostSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Post.objects.all()

@@ -36,4 +36,9 @@ async function fetchSuggestions() {
   return response.data;
 }
 
-export { fetchFeed, sendPost,sendLike, deletePost, fetchSuggestions };
+async function updatePost(postId: number, formData: FormData) {
+  const response = await Api.put(`/posts/${postId}/`, formData);
+  return response;
+}
+
+export { fetchFeed, sendPost,sendLike, deletePost, fetchSuggestions, updatePost };

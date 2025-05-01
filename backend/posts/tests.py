@@ -1,19 +1,28 @@
-from django.test import TestCase
 from django.contrib.auth.models import User
-from .models import Post
 from users.models import Follow
 from django.urls import reverse
+from rest_framework.test import APITestCase
 from rest_framework import status
-from rest_framework.test import APIClient
+from django.core.files.images import ImageFile
 from django.core.cache import cache
+from .models import Post
+from PIL import Image
+import io
+import os
 
+def generate_fake_image(name="test_image.jpg", size=(100, 100), color=(255, 0, 0)):
+    """Generates a fake image file for testing."""
+    image = Image.new("RGB", size, color)
+    temp_io = io.BytesIO()
+    image.save(temp_io, "jpeg")
+    temp_io.seek(0)
+    return ImageFile(temp_io, name=name)
 
-class PostViewTest(TestCase):
+class PostViewTest(APITestCase):
     def setUp(self):
         cache.clear()
         # Cria um usuário para os testes
         self.user = User.objects.create_user(username='testuser', password='12345')
-        self.client = APIClient()
         self.client.force_authenticate(user=self.user)  # Autentica o cliente como o usuário
 
     def test_create_post(self):
@@ -25,6 +34,31 @@ class PostViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Post.objects.count(), 1)
         self.assertEqual(Post.objects.get().text, 'Test Post')
+
+    def test_create_and_delete_post_with_image(self):
+        """
+        Testa a criação de post com imagem.
+        """
+        url = reverse('post-list-create')
+        image = generate_fake_image()
+        data = {"text": "Post with image", "image": image}
+        response = self.client.post(url, data, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        post = Post.objects.filter(id=response.data['id']).first()
+
+        image_path = post.image.path
+        self.assertTrue(os.path.exists(image_path))
+
+        url = reverse('post-detail', kwargs={'pk': response.data['id']})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(os.path.exists(image_path))
+
+        if os.path.exists(image_path):
+            os.remove(image_path)
+
 
     def test_list_posts(self):
         # Verifica se a listagem de posts funciona corretamente
@@ -108,14 +142,13 @@ class PostViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
-class FeedTests(TestCase):
+class FeedTests(APITestCase):
     def setUp(self):
         cache.clear()
         # Cria um usuário para os testes
         self.user = User.objects.create_user(username='user1', password='pass')
         self.other_user = User.objects.create_user(username='user2', password='pass')
 
-        self.client = APIClient()
         self.client.force_authenticate(user=self.user)  # Autentica o cliente como o usuário
 
     def test_feed_returns_followed_users_posts(self):
@@ -135,12 +168,11 @@ class FeedTests(TestCase):
         self.assertEqual(response.data["results"][0]["text"], 'Post by followed user')
 
 
-class PostSearchTest(TestCase):
+class PostSearchTest(APITestCase):
     def setUp(self):
         cache.clear()
         # Cria um usuário para os testes
         self.user = User.objects.create_user(username='testuser', password='12345')
-        self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
         # Cria alguns posts para testar a pesquisa
@@ -173,3 +205,66 @@ class PostSearchTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 0)
+
+class PostImageEditTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="pass")
+        self.client.force_authenticate(user=self.user)
+        # Cria um post sem imagem
+        self.post = Post.objects.create(user=self.user, text="Original")
+
+        # Cria um post com imagem
+        self.image = generate_fake_image("original.png")
+        self.post_with_image = Post.objects.create(user=self.user, text="With image", image=self.image)
+
+    def test_add_image_to_post(self):
+        image = generate_fake_image("add.png")
+        url = reverse("post-detail", kwargs={"pk": self.post.id})
+        response = self.client.put(url, {"text": "Now with image", "image": image}, format="multipart")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("image", response.data)
+        basePost = Post.objects.get(id=self.post.id)
+        self.assertTrue(basePost.image)
+
+        if os.path.exists(basePost.image.path):
+            os.remove(basePost.image.path)
+
+    def test_replace_image(self):
+        new_image = generate_fake_image("replace.png")
+        old_image = Post.objects.get(id=self.post_with_image.id).image
+
+        url = reverse("post-detail", kwargs={"pk": self.post_with_image.id})
+        response = self.client.put(url, {"text": "Updated", "image": new_image}, format="multipart")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("image", response.data)
+        self.assertNotIn(old_image.path, response.data["image"])
+
+        new_image_data = Post.objects.get(id=self.post_with_image.id).image
+        if os.path.exists(old_image.path):
+            os.remove(old_image.path)
+
+        if os.path.exists(new_image_data.path):
+            os.remove(new_image_data.path)
+
+    def test_edit_text_only_keep_image(self):
+        image = Post.objects.get(id=self.post_with_image.id).image
+
+        url = reverse("post-detail", kwargs={"pk": self.post_with_image.id})
+        response = self.client.put(url, {"text": "Only text change"}, format="multipart")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("image", response.data)
+        self.assertIsNotNone(Post.objects.get(id=self.post_with_image.id).image)
+
+        if image and os.path.exists(image.path):
+            os.remove(image.path)
+
+    def test_remove_image(self):
+        image = Post.objects.get(id=self.post_with_image.id).image
+        url = reverse("post-detail", kwargs={"pk": self.post_with_image.id})
+        response = self.client.put(url, {"text": "Removed image", "image": ""}, format="multipart")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Post.objects.get(id=self.post_with_image.id).image, "")
+
+        if os.path.exists(image.path):
+            os.remove(image.path)
