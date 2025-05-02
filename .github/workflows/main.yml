@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     services:
@@ -16,38 +16,45 @@ jobs:
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_PASSWORD: test_pass
         ports: ['5432:5432']
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd="pg_isready -U test_user"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
-    env:
-      DB_NAME: test_db
-      DB_USER: test_user
-      DB_PASSWORD: test_password
-      DB_HOST: localhost
-      SECRET_KEY: dummy
-      DEBUG: 'False'
-      ALLOWED_HOSTS: '*'
+      redis:
+        image: redis:alpine
+        ports: ['6379:6379']
+
+      celery:
+        image: rabbitmq:3-management-alpine
+        ports: ['5672:5672']
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
+      - name: Copy env
+        run: cp backend/.env.ci backend/.env
 
-      - name: Install dependencies
+      - name: Build and start services
+        run: docker-compose -f docker-compose.prod.yml up -d --build
+
+      - name: Wait for backend
         run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+          for i in {1..10}; do
+            if docker exec backend python manage.py migrate; then
+              break
+            fi
+            echo "Waiting for backend..."
+            sleep 5
+          done
 
       - name: Run tests
-        run: |
-          cd backend
-          python manage.py migrate
-          python manage.py test
+        run: docker exec backend pytest
+
+      - name: Shut down services
+        if: always()
+        run: docker-compose -f docker-compose.prod.yml down
