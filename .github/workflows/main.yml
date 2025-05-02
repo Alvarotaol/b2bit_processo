@@ -24,11 +24,21 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      redis:
+        image: redis:alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       DB_NAME: mini_twitter_test
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_HOST: localhost
+      REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: test
       DEBUG: "False"
 
@@ -38,15 +48,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.13"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Run tests
+      - name: Run migrations and tests
         working-directory: backend
         run: |
           python manage.py migrate
+          celery -A mini_twitter worker --loglevel=info &
           python manage.py test
