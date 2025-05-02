@@ -41,6 +41,8 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: test
       DEBUG: "False"
+      ACCESS_TOKEN_LIFETIME= 60
+      REFRESH_TOKEN_LIFETIME= 1
 
     steps:
       - uses: actions/checkout@v3
