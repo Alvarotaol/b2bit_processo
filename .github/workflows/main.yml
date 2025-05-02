@@ -45,6 +45,7 @@ jobs:
       REFRESH_TOKEN_LIFETIME: 1
       SIGNUP_LIMIT_PER_HOUR: 5
       LOGIN_LIMIT_PER_HOUR: 5
+      EMAIL_HOST: local
 
     steps:
       - uses: actions/checkout@v3
