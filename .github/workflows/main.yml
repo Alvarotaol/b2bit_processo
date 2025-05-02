@@ -43,6 +43,8 @@ jobs:
       DEBUG: "False"
       ACCESS_TOKEN_LIFETIME: 60
       REFRESH_TOKEN_LIFETIME: 1
+      SIGNUP_LIMIT_PER_HOUR: 5
+      LOGIN_LIMIT_PER_HOUR: 5
 
     steps:
       - uses: actions/checkout@v3
