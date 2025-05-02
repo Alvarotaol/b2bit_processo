@@ -1,36 +1,28 @@
-# Etapa 1: build
-FROM python:3.13-slim AS builder
+# backend/Dockerfile.prod
+FROM python:3.13-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y \
-	build-essential \
+	gcc \
 	libpq-dev \
+	netcat-openbsd \
 	&& rm -rf /var/lib/apt/lists/*
 
+RUN adduser --disabled-password appuser
 
-RUN adduser --uid 1000 --disabled-password --gecos "" appuser
-USER appuser
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --user -r requirements.txt
-
-# Etapa 2: runtime
-FROM python:3.13-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-WORKDIR /app
-
-COPY --from=builder /home/appuser/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-#RUN python manage.py collectstatic --noinput
+# Dá permissão de escrita antes de virar o appuser
+RUN mkdir -p /app/static /app/media && \
+	chown -R appuser:appuser /app
 
-CMD gunicorn core.wsgi:application \
-	--bind 0.0.0.0:8000 \
-	--workers 3 \
-	--timeout 120
+USER appuser
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "mini_twitter.wsgi:application"]

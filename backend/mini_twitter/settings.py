@@ -88,6 +88,12 @@ SWAGGER_SETTINGS = {
     "USE_SESSION_AUTH": False,
 }
 
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=config('REFRESH_TOKEN_LIFETIME', cast=int)),
+}
 
 # Rest Framework
 
