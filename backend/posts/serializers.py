@@ -28,9 +28,8 @@ class PostSerializer(serializers.ModelSerializer):
         request = self.context.get('request', None)
         user = request.user if request else None
         validated_data['user'] = user
-        image = validated_data["image"]
-        if image:
-            validated_data['image'] = None
+        image = validated_data.get('image', None)
+        validated_data['image'] = None
         post = super().create(validated_data)
         if image:
             self.save_renamed_image(post, image)

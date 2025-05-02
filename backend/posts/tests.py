@@ -216,6 +216,7 @@ class PostImageEditTest(APITestCase):
         # Cria um post com imagem
         self.image = generate_fake_image("original.png")
         self.post_with_image = Post.objects.create(user=self.user, text="With image", image=self.image)
+        #self.generated_images_path = [self.post_with_image.image.path]
 
     def test_add_image_to_post(self):
         image = generate_fake_image("add.png")
@@ -226,8 +227,6 @@ class PostImageEditTest(APITestCase):
         basePost = Post.objects.get(id=self.post.id)
         self.assertTrue(basePost.image)
 
-        if os.path.exists(basePost.image.path):
-            os.remove(basePost.image.path)
 
     def test_replace_image(self):
         new_image = generate_fake_image("replace.png")
@@ -238,33 +237,26 @@ class PostImageEditTest(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("image", response.data)
-        self.assertNotIn(old_image.path, response.data["image"])
+        self.assertNotIn(old_image.path, response.data["image"]) #Tem uma chance pequena de falhar mesmo estando certo
 
-        new_image_data = Post.objects.get(id=self.post_with_image.id).image
-        if os.path.exists(old_image.path):
-            os.remove(old_image.path)
-
-        if os.path.exists(new_image_data.path):
-            os.remove(new_image_data.path)
+        #Assegura que a imagem antiga foi removida do disco
+        self.assertFalse(os.path.exists(old_image.path))
 
     def test_edit_text_only_keep_image(self):
-        image = Post.objects.get(id=self.post_with_image.id).image
-
         url = reverse("post-detail", kwargs={"pk": self.post_with_image.id})
         response = self.client.put(url, {"text": "Only text change"}, format="multipart")
         self.assertEqual(response.status_code, 200)
         self.assertIn("image", response.data)
         self.assertIsNotNone(Post.objects.get(id=self.post_with_image.id).image)
 
-        if image and os.path.exists(image.path):
-            os.remove(image.path)
 
     def test_remove_image(self):
-        image = Post.objects.get(id=self.post_with_image.id).image
         url = reverse("post-detail", kwargs={"pk": self.post_with_image.id})
         response = self.client.put(url, {"text": "Removed image", "image": ""}, format="multipart")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Post.objects.get(id=self.post_with_image.id).image, "")
 
-        if os.path.exists(image.path):
-            os.remove(image.path)
+    def tearDown(self):
+        for post in Post.objects.all():
+            if post.image:
+                os.remove(post.image.path)

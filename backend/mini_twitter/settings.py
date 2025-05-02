@@ -104,14 +104,12 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
-        'users.throttling.SignupRateThrottle',
-        'users.throttling.LoginRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
         'user': '10000/min',
         'anon': '1000/min',
-        'signup': f'{config("SIGNUP_LIMIT_PER_HOUR", cast=int)}/min',
-        'login': f'{config("LOGIN_LIMIT_PER_HOUR", cast=int)}/min',
+        'signup': f'{config("SIGNUP_LIMIT_PER_HOUR", cast=int)}/hour',
+        'login': f'{config("LOGIN_LIMIT_PER_HOUR", cast=int)}/hour',
     }
 }
 

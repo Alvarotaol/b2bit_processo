@@ -1,10 +1,7 @@
 # Makefile
 
 # Nome do container de app
-CONTAINER_NAME=web
-
-# Comando pra rodar o Django
-DJANGO_CMD="python manage.py"
+CONTAINER_NAME=backend
 
 # Comando padrão do Docker Compose
 DC=docker-compose
@@ -15,15 +12,18 @@ status:
 
 # Cria o projeto com migrations e prepara o banco de dados
 migrate:
-	$(DC) run $(CONTAINER_NAME) $(DJANGO_CMD) migrate
+	$(DC) run $(CONTAINER_NAME) python manage.py migrate
 
 # Cria o superuser (se não existir)
 createsuperuser:
-	$(DC) run $(CONTAINER_NAME) $(DJANGO_CMD) createsuperuser
+	$(DC) run $(CONTAINER_NAME) python manage.py createsuperuser
 
 # Recria o ambiente Docker
 build:
 	$(DC) up --build -d
+
+prod:
+	$(DC) -f docker-compose.prod.yml up -d --build
 
 # Sobe o ambiente Docker
 up:
@@ -35,15 +35,15 @@ down:
 
 # Roda os testes
 test:
-	$(DC) run $(CONTAINER_NAME) $(DJANGO_CMD) test
+	$(DC) run $(CONTAINER_NAME) python manage.py test
 
 # Roda o shell do Django
 shell:
-	$(DC) run $(CONTAINER_NAME) $(DJANGO_CMD) shell
+	$(DC) run $(CONTAINER_NAME) python manage.py shell
 
 # Gera o arquivo de documentação (Swagger)
 docs:
-	$(DC) run $(CONTAINER_NAME) $(DJANGO_CMD) generateschema --output=swagger.yaml
+	$(DC) run $(CONTAINER_NAME) python manage.py generateschema --output=swagger.yaml
 
 # Executa o Django no modo de desenvolvimento
 dev:

@@ -2,51 +2,38 @@ version: '3.8'
 
 services:
   nginx:
-    image: nginx:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
     container_name: nginx
     ports:
       - "80:80"
-    volumes:
-      - ./frontend/nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./backend/static:/static
-      - ./backend/media:/media
+    env_file:
+      - ./frontend/.env
     depends_on:
       - backend
     networks:
       - backend_network
       - frontend_network
+
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
     command: [ "gunicorn", "--bind", "0.0.0.0:8000", "mini_twitter.wsgi:application" ]
     volumes:
       - ./backend:/app
-    ports:
-      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    expose:
+      - "8000"
     depends_on:
       - db
       - redis
-    env_file:
-      - ./backend/.env
     networks:
       - backend_network
       - frontend_network
 
-  # Frontend (React)
-  frontend:
-    build: ./frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-    command: npm run dev
-    depends_on:
-      - backend
-    environment:
-      - REACT_APP_API_URL=http://backend:8000/api
-    networks:
-      - frontend_network
-
-  # Banco de Dados (PostgreSQL)
   db:
     image: postgres:14
     environment:
@@ -67,9 +54,10 @@ services:
     expose:
       - "6379"
 
-  # Celery (worker)
   celery:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
     command: [ "celery", "-A", "mini_twitter", "worker", "--loglevel=info" ]
     depends_on:
       - redis
@@ -79,6 +67,7 @@ services:
 
 volumes:
   postgres_data:
+  frontend_build:
 
 
 networks:

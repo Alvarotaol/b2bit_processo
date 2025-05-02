@@ -1,7 +1,7 @@
 import Api from "./http";
 
 async function fetchFeed(url?: string) {
-  return Api.get(url || "http://localhost:8000/api/feed/");
+  return Api.get(url || "/feed/");
 }
 
 async function sendLike(postId: number) {
