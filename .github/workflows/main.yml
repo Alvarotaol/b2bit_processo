@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
@@ -14,47 +14,39 @@ jobs:
       postgres:
         image: postgres:14
         env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: mini_twitter_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
         options: >-
-          --health-cmd="pg_isready -U test_user"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-      redis:
-        image: redis:alpine
-        ports: ['6379:6379']
-
-      celery:
-        image: rabbitmq:3-management-alpine
-        ports: ['5672:5672']
+    env:
+      DB_NAME: mini_twitter_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      SECRET_KEY: test
+      DEBUG: "False"
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Copy env
-        run: cp backend/.env.ci backend/.env
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
 
-      - name: Build and start services
-        run: docker-compose -f docker-compose.prod.yml up -d --build
-
-      - name: Wait for backend
+      - name: Install dependencies
         run: |
-          for i in {1..10}; do
-            if docker exec backend python manage.py migrate; then
-              break
-            fi
-            echo "Waiting for backend..."
-            sleep 5
-          done
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
 
       - name: Run tests
-        run: docker exec backend pytest
-
-      - name: Shut down services
-        if: always()
-        run: docker-compose -f docker-compose.prod.yml down
+        working-directory: backend
+        run: |
+          python manage.py migrate
+          python manage.py test
