@@ -24,3 +24,5 @@ RUN chmod +x /entrypoint.sh
 RUN chown -R appuser:appuser /app /entrypoint.sh
 
 USER appuser
+
+ENTRYPOINT [ "/entrypoint.sh" ]]

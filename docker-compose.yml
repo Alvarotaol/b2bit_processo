@@ -18,7 +18,7 @@ services:
       - frontend_network
   backend:
     build: ./backend
-    command: [ "/entrypoint.sh", "gunicorn", "--bind", "0.0.0.0:8000", "mini_twitter.wsgi:application" ]
+    command: [ "gunicorn", "--bind", "0.0.0.0:8000", "mini_twitter.wsgi:application" ]
     volumes:
       - ./backend:/app
     ports:

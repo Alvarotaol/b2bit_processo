@@ -71,6 +71,25 @@ class PostViewTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 2)
 
+    def test_paginated_list_posts(self):
+        Post.objects.bulk_create([
+            Post(user=self.user, text=f'Post {i}') for i in range(1, 15)
+        ])
+
+        url = reverse('post-list-create')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 14)
+        self.assertEqual(len(response.data['results']), 10)
+
+        url += '?page=2'
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 14)
+        self.assertEqual(len(response.data['results']), 4)
+
     def test_create_post_without_authentication(self):
         # Verifica que um usuário não autenticado não pode criar posts
         self.client.logout()  # Desloga o cliente

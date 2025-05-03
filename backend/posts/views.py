@@ -64,12 +64,11 @@ class FeedView(generics.ListAPIView):
         user = request.user
         cache_key = f"feed_{user.id}"  # Chave única para o feed de cada usuário
         cached_feed = cache.get(cache_key)
-
         if cached_feed is None:
             following_ids = user.following.values_list('followed_user', flat=True)
             following_ids = list(following_ids)
             following_ids.append(user.id)
-            posts = Post.objects.filter(user_id__in=following_ids).order_by('-created_at')[:10]
+            posts = Post.objects.filter(user_id__in=following_ids).order_by('-created_at')
             serializer = PostSerializer(posts, many=True, context={'request': request})
             cached_feed = serializer.data
             cache.set(cache_key, cached_feed, timeout=60*15)  # Cache por 15 minutos
