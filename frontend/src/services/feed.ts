@@ -4,6 +4,10 @@ async function fetchFeed(url?: string) {
   return Api.get(url || "/feed/");
 }
 
+async function searchFeed(search?: string) {
+  return Api.get('/posts/search/', { q: search });
+}
+
 async function sendLike(postId: number) {
   try {
     Api.post(`/posts/${postId}/like/`);
@@ -41,4 +45,4 @@ async function updatePost(postId: number, formData: FormData) {
   return response;
 }
 
-export { fetchFeed, sendPost,sendLike, deletePost, fetchSuggestions, updatePost };
+export { fetchFeed, searchFeed, sendPost,sendLike, deletePost, fetchSuggestions, updatePost };

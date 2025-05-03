@@ -11,7 +11,7 @@ export default function SuggestionsSidebar() {
   }, []);
 
   return (
-    <div className="max-h-[calc(90vh-100px)] bg-white p-4 rounded shadow w-64">
+    <div className="max-h-screen bg-white p-4 rounded shadow w-64">
       <h2 className="font-semibold mb-2">Sugestões para seguir</h2>
       {suggestions.length === 0 && <p>Nenhuma sugestão</p> ||
       suggestions.map((user) => (

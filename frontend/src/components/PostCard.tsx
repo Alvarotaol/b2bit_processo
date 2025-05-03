@@ -1,26 +1,27 @@
-import React, { useState } from "react";
+import { useState, useContext, FC } from "react";
 import { PostType } from "../types";
 import { Heart } from "lucide-react";
 import { sendLike, deletePost } from "../services/feed";
 import { UserContext } from "../components/UserContext";
 import { Link } from "react-router-dom";
 import EditPostModal from "./EditPostModal";
+import { Trash, Edit } from "lucide-react";
 
 type PostProps = {
   post: PostType;
 };
 
-const PostCard: React.FC<PostProps> = ({ post }) => {
+const PostCard: FC<PostProps> = ({ post }: PostProps) => {
   const [like_count, setLikes] = useState(post.like_count);
   const [liked, setLiked] = useState(post.has_liked);
   const [currentPost, setCurrentPost] = useState<PostType | null>(null);
-  const user = React.useContext(UserContext);
+  const user = useContext(UserContext);
 
   const onLike = async () => {
     try {
       const success = await sendLike(post.id);
       if(success) {
-        setLikes((prev) => (liked ? prev - 1 : prev + 1));
+        setLikes((prev: number) => (liked ? prev - 1 : prev + 1));
         setLiked(!liked);
       }
     } catch (error: any) {
@@ -52,9 +53,9 @@ const PostCard: React.FC<PostProps> = ({ post }) => {
           {user && post.user_id === user.id  && (
             <span>
               <button className="text-red-500 text-sm hover:underline" onClick={onDelete}>
-                Excluir
+                <Trash className="w-4 h-4 mx-2" />
               </button>
-              <button onClick={() => setCurrentPost(post)} className="text-blue-500 text-sm">Editar</button>
+              <button onClick={() => setCurrentPost(post)} className="text-blue-500 text-sm"><Edit className="w-4 h-4" /></button>
             </span>
           )}
         </div>
