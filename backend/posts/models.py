@@ -17,9 +17,6 @@ class Post(models.Model):
     class Meta:
         ordering = ['-created_at']
 
-
-from .models import Post
-
 class Like(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_likes')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_likes')

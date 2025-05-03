@@ -1,0 +1,37 @@
+Table users {
+  id integer [primary key, increment]
+  username varchar
+  email varchar
+  password varchar
+}
+
+Table posts {
+  id integer [primary key, increment]
+  user_id integer [ref: > users.id]
+  text text
+  image varchar [note: "Image path (optional)"]
+  created_at datetime
+}
+
+Table post_likes {
+  id integer [primary key, increment]
+  user_id integer [ref: > users.id]
+  post_id integer [ref: > posts.id]
+  created_at datetime
+
+  Indexes {
+    (user_id, post_id) [unique]
+  }
+}
+
+Table follows {
+  id integer [primary key, increment]
+  user_id integer [ref: > users.id]
+  followed_user_id integer [ref: > users.id]
+  created_at datetime
+
+  Indexes {
+    (user_id, followed_user_id) [unique]
+  }
+}
+

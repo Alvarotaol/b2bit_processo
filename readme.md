@@ -79,6 +79,9 @@ Workflow defined in: `.github/workflows/ci.yml`
 └── .github/workflows/
 ```
 
+## Modeling
+![Model Diagram](docs/model.png)
+
 ## ✨ Features
 
 - Upload, update and remove post images
