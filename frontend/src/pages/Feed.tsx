@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchFeed } from "../services/feed";
 import { PostType } from "../types";
 import Loader from "../components/Loader";
@@ -13,18 +13,16 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigator = useNavigate();
-  let didRun = false;
+  const loaderRef = useRef<HTMLDivElement | null>(null);
 
   async function loadFeed(url?: string) {
-
     try {
       setLoading(true);
       const response = await fetchFeed(url);
-      //const response = {data: {next: null, results: []}}
       setPosts((prev) => [...prev, ...response.data.results]);
       setNextUrl(response.data.next);
     } catch (err: any) {
-      if(err.response.status === 401) {
+      if (err.response?.status === 401) {
         navigator("/login");
       }
       setError("Erro ao carregar feed");
@@ -33,13 +31,31 @@ export default function Feed() {
     }
   }
 
+  // Carrega a primeira página
   useEffect(() => {
-    if (!didRun) {
-      //setDidRun(true);
-      didRun = true;
-      loadFeed();
-    }
+    loadFeed();
   }, []);
+
+  // Observa o loaderRef
+  useEffect(() => {
+    if (!nextUrl || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadFeed(nextUrl);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    const el = loaderRef.current;
+    if (el) observer.observe(el);
+
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [nextUrl, loading]);
 
   if (loading && posts.length === 0) return <Loader />;
 
@@ -54,15 +70,14 @@ export default function Feed() {
         {posts.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
-        {nextUrl && (
-          <button
-            onClick={() => loadFeed(nextUrl)}
-            className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            disabled={loading}
-          >
-            {loading ? "Carregando..." : "Carregar mais"}
-          </button>
-        ) || <div className="text-gray-500 text-center">Fim dos posts</div>}
+
+        <div ref={loaderRef} className="h-10" />
+
+        {loading && <div className="text-center my-4">Carregando...</div>}
+
+        {!nextUrl && !loading && (
+          <div className="text-gray-500 text-center mt-4">Fim dos posts</div>
+        )}
       </div>
     </Layout>
   );
